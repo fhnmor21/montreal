@@ -508,6 +508,38 @@ Type* allocateType(Allocator& alloc, Blk& b, const usize amount)
   return nullptr;
 }
 
+// Resize: for linear containers
+//-----------------------------------------------------------------
+template < typename Container >
+bool resize(Container& container, const usize Capacity)
+{
+  using Type = typename Container::ElementType;
+  using Allocator = typename Container::AllocatorType;
+
+  if(Capacity > container.capacity_)
+  {
+    Blk newMemBlk;
+    typename Container::ElementType* oldArray_ = container.array_;
+
+    container.array_ = allocateType< Type, Allocator >(container.alloc_, newMemBlk, Capacity);
+    std::fill((container.array_ + container.capacity_ - 1),
+              (container.array_ + Capacity),
+              container.init_);
+    std::copy(oldArray_, (oldArray_ + container.capacity_), container.array_);
+    container.length_ = Capacity;
+    container.capacity_ = Capacity;
+
+    if(container.memBlock_.ptr)
+    {
+      container.alloc_.deallocate(container.memBlock_);
+    }
+    container.memBlock_ = newMemBlk;
+
+    return true;
+  }
+  return false;
+}
+
 } // end namespace Montreal
 
 #endif // MEMORY_HPP
