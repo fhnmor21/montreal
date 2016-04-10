@@ -101,6 +101,39 @@ ListInterface< Type >& ListInterface< Type >::operator=(const ListInterface< Typ
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// FixedList : Fixed size double linked list
+///////////////////////////////////////////////////////////////////////////////
+
+// TODO: implement
+template < typename Type, usize Capacity >
+struct FixedList : public ListInterface< Type >
+{
+
+  FixedList() = delete;
+  explicit FixedList(const Type& init);
+  FixedList(const FixedList& other);
+  FixedList& operator=(const FixedList& other);
+  // TODO: Move constructor???
+  virtual ~FixedList() {}
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// List : dynamic double linked list
+///////////////////////////////////////////////////////////////////////////////
+
+// TODO: implement
+template < typename Type, usize Capacity >
+struct List : public ListInterface< Type >
+{
+  List() = delete;
+  explicit List(const Type& init);
+  List(const List& other);
+  List& operator=(const List& other);
+  // TODO: Move constructor???
+  virtual ~List() {}
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Accessors
 ///////////////////////////////////////////////////////////////////////////////
 

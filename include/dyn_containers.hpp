@@ -19,25 +19,6 @@ namespace W2E
 namespace Utils
 {
 
-// forward declarations
-struct Allocator;
-
-///////////////////////////////////////////////////////////////////////////////
-// Tree : dynamic balanced tree containter (red-black)
-///////////////////////////////////////////////////////////////////////////////
-
-// TODO: implement
-template < typename Type >
-struct Tree : public TreeInterface
-{
-  Tree() = delete;
-  Tree(Allocator& alloc, const Type& init);
-  explicit Tree(const Tree& other);
-  Tree& operator=(const Tree& other);
-  // TODO: Move constructor???
-  virtual ~Tree() {}
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 // Trie : dynamic trie containter
 ///////////////////////////////////////////////////////////////////////////////
@@ -52,23 +33,6 @@ struct Tree : public TreeInterface
 //   Trie& operator=(const Trie& other);
 //   // TODO: Move constructor???
 //   virtual ~Trie() {}
-// };
-
-///////////////////////////////////////////////////////////////////////////////
-// HashMap : dynamic hash map containter
-///////////////////////////////////////////////////////////////////////////////
-
-// TODO: implement
-// template < typename Type, bool allowMultiple >
-// struct HashMap : public HashMapInterface
-// {
-//   const bool allowMultiple_{allowMultiple};
-//
-//   HashMap() = delete;
-//   explicit HashMap(Allocator& alloc, const Type& init);
-//   explicit HashMap(const HashMap& other);
-//   HashMap& operator=(const HashMap& other);
-//   // TODO: Move constructor???
 // };
 
 ///////////////////////////////////////////////////////////////////////////////

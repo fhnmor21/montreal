@@ -15,22 +15,6 @@ namespace Utils
 {
 
 ///////////////////////////////////////////////////////////////////////////////
-// Tree : Fixed size tree containter (red-black)
-///////////////////////////////////////////////////////////////////////////////
-
-// TODO: implement
-// template < typename Type >
-// struct FixedTree : public TreeInterface
-// {
-//   FixedTree() = delete;
-//   explicit FixedTree(const Type& init);
-//   FixedTree(const FixedTree& other);
-//   FixedTree& operator=(const FixedTree& other);
-//   // TODO: Move constructor???
-//   virtual ~FixedTree() {}
-// };
-
-///////////////////////////////////////////////////////////////////////////////
 // FixedTrie : Fixed size trie containter
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -44,23 +28,6 @@ namespace Utils
 //   FixedTrie& operator=(const FixedTrie& other);
 //   // TODO: Move constructor???
 //   virtual ~FixedTrie() {}
-// };
-
-///////////////////////////////////////////////////////////////////////////////
-// FixedHashMap : fixed size hash map containter
-///////////////////////////////////////////////////////////////////////////////
-
-// TODO: implement
-// template < typename Type, bool allowMultiple >
-// struct FixedHashMap: public HashMapInterface
-// {
-//   const bool allowMultiple_{allowMultiple};
-//
-//   FixedHashMap() = delete;
-//   explicit FixedHashMap(Allocator& alloc, const Type& init);
-//   explicit FixedHashMap(const FixedHashMap& other);
-//   FixedHashMap& operator=(const FixedHashMap& other);
-//   // TODO: Move constructor???
 // };
 
 ///////////////////////////////////////////////////////////////////////////////

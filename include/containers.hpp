@@ -17,41 +17,6 @@ namespace Utils
 {
 
 ///////////////////////////////////////////////////////////////////////////////
-// Tree
-///////////////////////////////////////////////////////////////////////////////
-
-template < typename Type >
-struct TreeInterface // : Array ???should this inherite from Array???
-{
-  enum NodeColour
-  {
-    Red,
-    Black,
-  };
-
-  struct ElementType
-  {
-    Type data;
-    NodeColour colour;
-    ElementType* parent;
-    ElementType* left;
-    ElementType* right;
-  };
-
-  cSize length_;
-  ElementType* root_;
-  ElementType* free_;
-
-  virtual ~TreeInterface(){};
-  TreeInterface();
-  explicit TreeInterface(const TreeInterface& other);
-  TreeInterface& operator=(const TreeInterface& other);
-  // TODO: Move constructor???
-};
-
-// TODO: Implement constructors
-
-///////////////////////////////////////////////////////////////////////////////
 // Trie
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -64,21 +29,6 @@ struct TreeInterface // : Array ???should this inherite from Array???
 //   TrieInterface& operator=(const TrieInterface& other);
 //   // TODO: Move constructor???
 // };
-
-///////////////////////////////////////////////////////////////////////////////
-// HashMap
-///////////////////////////////////////////////////////////////////////////////
-
-// TODO: Implement
-template < typename Type >
-struct HashMapInterface
-{
-  virtual ~HashMapInterface() {}
-  HashMapInterface();
-  explicit HashMapInterface(const HashMapInterface& other);
-  HashMapInterface& operator=(const HashMapInterface& other);
-  // TODO: Move constructor???
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Heap
