@@ -1,9 +1,32 @@
 /**
+The MIT License (MIT)
+
+Copyright (c) 2016 Flavio Moreira
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+/**
   * composable memory allocators with diverse strategies
   *
-  */
 
-/* EXAMPLE composite allocator:
+  EXAMPLE composite allocator:
   using StkAllocator = StackAllocator< 262144, 64 >; // 256kB
   using FLAllocator0 = Freelist< StkAllocator, 0, 64, 4096 >;
   using FLAllocator1 = Freelist< FLAllocator0, 65, 128, 2048 >;
@@ -25,35 +48,14 @@
   chunk sizes!
 */
 
-#ifndef UTILS_MEMORY_HPP
-#define UTILS_MEMORY_HPP
+#ifndef MEMORY_HPP
+#define MEMORY_HPP
 
+#include "functions.hpp"
 #include <algorithm>
 
-#include "utils/types.hpp"
-
-namespace W2E
+namespace Montreal
 {
-
-namespace Utils
-{
-
-// computes the nearest larger power of two
-// ref: http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogObvious
-// @param d number to find the nearest pow2 from
-// @return the nearest larger power of two
-cSize roundToAligned(const cSize& d)
-{
-  cSize v = d;
-  v--;
-  v |= v >> 1;
-  v |= v >> 2;
-  v |= v >> 4;
-  v |= v >> 8;
-  v |= v >> 16;
-  v++;
-  return v;
-}
 
 // allocator based on ideas from Alexandrescu:
 // https://github.com/CppCon/CppCon2015/tree/master/Presentations/allocator%20Is%20to%20Allocation%20what%20vector%20Is%20to%20Vexation
@@ -62,23 +64,8 @@ cSize roundToAligned(const cSize& d)
 struct Blk
 {
   void* ptr;
-  cSize size;
+  usize size;
 };
-
-///////////////////////////////////////////////////////////////////////////////
-// helper function to allocate a ptr to a specific type
-///////////////////////////////////////////////////////////////////////////////
-
-template < typename Type, typename Allocator >
-Type* allocateType(Allocator& alloc, Blk& b, const cSize amount)
-{
-  if(b.ptr == nullptr)
-  {
-    b = alloc.allocate(amount * sizeof(Type));
-    return static_cast< Type* >(b.ptr);
-  }
-  return nullptr;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Fallback: try primary alloc, if alloc fails try secondary
@@ -88,7 +75,7 @@ template < class Primary, class Fallback >
 class FallbackAllocator : private Primary, private Fallback
 {
 public:
-  Blk allocate(cSize n);
+  Blk allocate(usize n);
   void deallocate(Blk b);
   bool owns(Blk b);
 };
@@ -97,7 +84,7 @@ public:
 // @param n size of memory chunk
 // @return allocated memory block
 template < class Primary, class Fallback >
-Blk FallbackAllocator< Primary, Fallback >::allocate(cSize n)
+Blk FallbackAllocator< Primary, Fallback >::allocate(usize n)
 {
   Blk r = Primary::allocate(n);
   if(!r.ptr)
@@ -135,11 +122,11 @@ bool FallbackAllocator< Primary, Fallback >::owns(Blk b)
 // Selector: Sizes ≤ threshold goes to SmallAllocator, else to LargeAllocator
 ///////////////////////////////////////////////////////////////////////////////
 
-template < cSize threshold, class SmallAllocator, class LargeAllocator >
+template < usize threshold, class SmallAllocator, class LargeAllocator >
 class Selector : private SmallAllocator, private LargeAllocator
 {
 public:
-  Blk allocate(cSize n);
+  Blk allocate(usize n);
   void deallocate(Blk b);
   bool owns(Blk b);
 };
@@ -147,8 +134,8 @@ public:
 // allocate chunk of certain size into memory block
 // @param n size of memory chunk
 // @return allocated memory block
-template < cSize threshold, class SmallAllocator, class LargeAllocator >
-Blk Selector< threshold, SmallAllocator, LargeAllocator >::allocate(cSize n)
+template < usize threshold, class SmallAllocator, class LargeAllocator >
+Blk Selector< threshold, SmallAllocator, LargeAllocator >::allocate(usize n)
 {
   Blk r;
   if(threshold > n)
@@ -162,7 +149,7 @@ Blk Selector< threshold, SmallAllocator, LargeAllocator >::allocate(cSize n)
 
 // deallocate chunk described by block
 // @param b memory block
-template < cSize threshold, class SmallAllocator, class LargeAllocator >
+template < usize threshold, class SmallAllocator, class LargeAllocator >
 void Selector< threshold, SmallAllocator, LargeAllocator >::deallocate(Blk b)
 {
   if(SmallAllocator::owns(b))
@@ -178,7 +165,7 @@ void Selector< threshold, SmallAllocator, LargeAllocator >::deallocate(Blk b)
 // check if the chunk is owned by this allocator
 // @param b memory block
 // @return true -> owns | false -> does not own
-template < cSize threshold, class SmallAllocator, class LargeAllocator >
+template < usize threshold, class SmallAllocator, class LargeAllocator >
 bool Selector< threshold, SmallAllocator, LargeAllocator >::owns(Blk b)
 {
   return SmallAllocator::owns(b) || LargeAllocator::owns(b);
@@ -188,7 +175,7 @@ bool Selector< threshold, SmallAllocator, LargeAllocator >::owns(Blk b)
 // Freelist: Keeps list of previous allocations of any given size
 ///////////////////////////////////////////////////////////////////////////////
 
-template < class Parent, cSize minSize, cSize maxSize, cSize maxBlocks >
+template < class Parent, usize minSize, usize maxSize, usize maxBlocks >
 class Freelist : private Parent
 {
 public:
@@ -198,7 +185,7 @@ public:
   {
   }
 
-  Blk allocate(cSize n);
+  Blk allocate(usize n);
   void deallocate(Blk b);
   bool owns(Blk b);
 
@@ -211,14 +198,14 @@ private:
   };
 
   Node* root_;
-  cSize countDown_{maxBlocks};
+  usize countDown_{maxBlocks};
 };
 
 // allocate chunk of certain size into memory block
 // @param n size of memory chunk
 // @return allocated memory block
-template < class Parent, cSize minSize, cSize maxSize, cSize maxBlocks >
-Blk Freelist< Parent, minSize, maxSize, maxBlocks >::allocate(cSize n)
+template < class Parent, usize minSize, usize maxSize, usize maxBlocks >
+Blk Freelist< Parent, minSize, maxSize, maxBlocks >::allocate(usize n)
 {
   if(n >= minSize && n <= maxSize && (countDown_ < maxBlocks) && root_)
   {
@@ -232,7 +219,7 @@ Blk Freelist< Parent, minSize, maxSize, maxBlocks >::allocate(cSize n)
 
 // deallocate chunk described by block
 // @param b memory block
-template < class Parent, cSize minSize, cSize maxSize, cSize maxBlocks >
+template < class Parent, usize minSize, usize maxSize, usize maxBlocks >
 void Freelist< Parent, minSize, maxSize, maxBlocks >::deallocate(Blk b)
 {
   if(b.size < minSize || b.size > maxSize || countDown_ == 0)
@@ -251,7 +238,7 @@ void Freelist< Parent, minSize, maxSize, maxBlocks >::deallocate(Blk b)
 // check if the chunk is owned by this allocator
 // @param b memory block
 // @return true -> owns | false -> does not own
-template < class Parent, cSize minSize, cSize maxSize, cSize maxBlocks >
+template < class Parent, usize minSize, usize maxSize, usize maxBlocks >
 bool Freelist< Parent, minSize, maxSize, maxBlocks >::owns(Blk b)
 {
   return (b.size >= minSize && b.size < maxSize) || Parent::owns(b);
@@ -268,7 +255,7 @@ class MAllocator
 {
 public:
   MAllocator() {}
-  Blk allocate(cSize n);
+  Blk allocate(usize n);
   void deallocate(Blk b);
   bool owns(Blk b);
 
@@ -281,7 +268,7 @@ private:
 // @param n size of memory chunk
 // @return allocated memory block
 template < u8 id >
-Blk MAllocator< id >::allocate(cSize n)
+Blk MAllocator< id >::allocate(usize n)
 {
   Blk r;
   r.ptr = std::malloc(n * sizeof(char));
@@ -314,7 +301,7 @@ bool MAllocator< id >::owns(Blk b)
 // and stack semantics to allocate memory
 ///////////////////////////////////////////////////////////////////////////////
 
-template < cSize size, cSize minBlock >
+template < usize size, usize minBlock >
 class StackAllocator
 {
 public:
@@ -323,7 +310,7 @@ public:
       , pointer_{data_}
   {
   }
-  Blk allocate(cSize n);
+  Blk allocate(usize n);
   void deallocate(Blk b);
   bool owns(Blk b);
 
@@ -338,10 +325,10 @@ private:
 // allocate chunk of certain size into memory block
 // @param n size of memory chunk
 // @return allocated memory block
-template < cSize size, cSize minBlock >
-Blk StackAllocator< size, minBlock >::allocate(cSize n)
+template < usize size, usize minBlock >
+Blk StackAllocator< size, minBlock >::allocate(usize n)
 {
-  auto nn = std::max(roundToAligned(n), minBlock);
+  auto nn = std::max(roundToPow2(n), minBlock);
   if(nn > (data_ + size) - pointer_)
   {
     return {nullptr, 0};
@@ -353,10 +340,10 @@ Blk StackAllocator< size, minBlock >::allocate(cSize n)
 
 // deallocate chunk described by block
 // @param b memory block
-template < cSize size, cSize minBlock >
+template < usize size, usize minBlock >
 void StackAllocator< size, minBlock >::deallocate(Blk b)
 {
-  if(static_cast< char* >(b.ptr) + roundToAligned(b.size) == pointer_)
+  if(static_cast< char* >(b.ptr) + roundToPow2(b.size) == pointer_)
   {
     pointer_ = static_cast< char* >(b.ptr);
   }
@@ -365,23 +352,23 @@ void StackAllocator< size, minBlock >::deallocate(Blk b)
 // check if the chunk is owned by this allocator
 // @param b memory block
 // @return true -> owns | false -> does not own
-template < cSize size, cSize minBlock >
+template < usize size, usize minBlock >
 bool StackAllocator< size, minBlock >::owns(Blk b)
 {
   return b.ptr >= this->data_ && b.ptr < this->data_ + size;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// PoolAllocator: uses malloc to get a big chunck and manages its use
+// BitMapAllocator: uses malloc to get a big chunck and manages its use
 // in a memory pool using a bitmap
 ///////////////////////////////////////////////////////////////////////////////
 
-// FIXME: change to allow allocating a range of sizes!
-template < cSize size, cSize block >
-class PoolAllocator
+// TODO: change to allow allocating a range of chunk sizes!
+template < usize size, usize block >
+class BitMapAllocator
 {
 public:
-  PoolAllocator()
+  BitMapAllocator()
       : data_{nullptr}
       , pointer_{nullptr}
       , freeChuncks_{0}
@@ -392,19 +379,19 @@ public:
     this->pointer = this->data_;
     std::fill(this->map, this->map + this->freeChuncks_, 0);
   }
-  ~PoolAllocator()
+  ~BitMapAllocator()
   {
     assert(this->freeChuncks_ == static_cast< u32 >(size / block));
     std::free(static_cast< void* >(this->data_));
   }
 
-  Blk allocate(cSize n);
+  Blk allocate(usize n);
   void deallocate(Blk b);
   bool owns(Blk b);
 
 private:
-  PoolAllocator(PoolAllocator& other) = delete;
-  PoolAllocator& operator=(const PoolAllocator& other) = delete;
+  BitMapAllocator(BitMapAllocator& other) = delete;
+  BitMapAllocator& operator=(const BitMapAllocator& other) = delete;
 
   char* data_;
   char* pointer_;
@@ -417,10 +404,10 @@ private:
 // allocate chunk of certain size into memory block
 // @param n size of memory chunk
 // @return allocated memory block
-template < cSize size, cSize block >
-Blk PoolAllocator< size, block >::allocate(cSize n)
+template < usize size, usize block >
+Blk BitMapAllocator< size, block >::allocate(usize n)
 {
-  cSize nn = roundToAligned(n);
+  usize nn = roundToPow2(n);
   if(nn == block && this->freeChuncks_)
   {
     Blk r;
@@ -473,8 +460,8 @@ Blk PoolAllocator< size, block >::allocate(cSize n)
 
 // deallocate chunk described by block
 // @param b memory block
-template < cSize size, cSize block >
-void PoolAllocator< size, block >::deallocate(Blk b)
+template < usize size, usize block >
+void BitMapAllocator< size, block >::deallocate(Blk b)
 {
   u32 offset = static_cast< u32 >((static_cast< char* >(b.ptr) - this->data_) / block);
   u8 bitset = offset % 8;
@@ -485,62 +472,42 @@ void PoolAllocator< size, block >::deallocate(Blk b)
 // check if the chunk is owned by this allocator
 // @param b memory block
 // @return true -> owns | false -> does not own
-template < cSize size, cSize block >
-bool PoolAllocator< size, block >::owns(Blk b)
+template < usize size, usize block >
+bool BitMapAllocator< size, block >::owns(Blk b)
 {
   return static_cast< char* >(b.ptr) >= data_ && static_cast< char* >(b.ptr) < this->data_ + size;
 }
 
-} // end namespace Utils
+///////////////////////////////////////////////////////////////////////////////
+// ObjectPool pre-alloc a lot of objects and recycle them when no longer needed
+///////////////////////////////////////////////////////////////////////////////
 
-} // end namespace W2E
-
-#endif // UTILS_MEMORY_HPP
+template < typename Type, usize preAllocateAmount >
+class ObjectPool
+    : public Freelist<
+          FallbackAllocator< StackAllocator< preAllocateAmount * sizeof(Type), sizeof(Type) >,
+                             MAllocator< 0 > >,
+          sizeof(Type),
+          sizeof(Type),
+          preAllocateAmount >
+{
+};
 
 ///////////////////////////////////////////////////////////////////////////////
-// Slicer: sits on top of bulk blocks allocator and provide just a slice
+// helper function to allocate a ptr to a specific type
 ///////////////////////////////////////////////////////////////////////////////
-// NOTE: does this make sense??? or can this be implemented as a pool???
-// template < class BulkAllocator, cSize size, cSize minBlock = 1024 >
-// class Slicer
-// {
-// public:
-//   explicit Slicer(BulkAllocator& bulkAlloc)
-//       : data_{nullptr}
-//       , bulkAlloc_{bulkAlloc}
-//   {
-//   }
-//
-//   Blk allocate(cSize n);
-//   void deallocate(Blk b);
-//   bool owns(Blk b);
-//
-// private:
-//   Slicer() = delete;
-//   Slicer(Slicer& other) = delete;
-//   Slicer& operator=(Slicer& other) = delete;
-//
-//   // u8 sliceMap_[maxSlices >> 3];
-//   char* data_;
-//   BulkAllocator& bulkAlloc_;
-// };
-//
-// template < class BulkAllocator, cSize size, cSize maxSlices >
-// Blk Slicer< BulkAllocator, size, maxSlices >::allocate(cSize n)
-// {
-//   // TODO: checks if there is data_ (!= nullptr)
-//   // then return one of the free slices
-//   return {nullptr, 0};
-// }
-//
-// template < class BulkAllocator, cSize size, cSize maxSlices >
-// void Slicer< BulkAllocator, size, maxSlices >::deallocate(Blk b)
-// {
-// }
-//
-// template < class BulkAllocator, cSize size, cSize maxSlices >
-// bool Slicer< BulkAllocator, size, maxSlices >::owns(Blk b)
-// {
-//   return this->data_ != nullptr && b.ptr >= this->data_ && b.ptr < this->data_ + (size *
-//   maxSlices);
-// }
+
+template < typename Type, typename Allocator >
+Type* allocateType(Allocator& alloc, Blk& b, const usize amount)
+{
+  if(b.ptr == nullptr)
+  {
+    b = alloc.allocate(amount * sizeof(Type));
+    return static_cast< Type* >(b.ptr);
+  }
+  return nullptr;
+}
+
+} // end namespace Montreal
+
+#endif // MEMORY_HPP
