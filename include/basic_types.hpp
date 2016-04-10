@@ -28,6 +28,12 @@ SOFTWARE.
 #include <cstddef>
 #include <cstdint>
 
+// based idea from Ginger Bill DUNJUN: github.com/gingerBill/Dunjun/
+#define GLOBAL static           // global variables
+#define CLASS_METHOD static     // class methods work without instantiation
+#define INTERNAL static         // internal linkage
+#define LOCAL_PERSISTENT static // local persisting variables
+
 namespace Montreal
 {
 
@@ -43,6 +49,12 @@ using i32 = int32_t;
 using i64 = int64_t;
 using f32 = float;
 using f64 = double;
+
+enum ErrorCode
+{
+  UNKNOWN_ERROR = 0,
+  NO_ERROR = 1,
+};
 
 } // end namespace Montreal
 

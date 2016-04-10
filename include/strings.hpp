@@ -3,42 +3,16 @@
   *
   */
 
-#ifndef UTILS_STRINGS_HPP
-#define UTILS_STRINGS_HPP
+#ifndef STRINGS_HPP
+#define STRINGS_HPP
 
 #include <algorithm>
 #include <cstring>
 
-// FIXME: have to try to remove this... replace for struct
-#include <tuple>
+#include "basic_types.hpp"
+#include "functions.hpp"
 
-#include "utils/types.hpp"
-
-namespace // anonymous
-{
-using namespace W2E::Utils;
-
-// FIXME: this same function is used in utils/.memory.hpp -> remove duplicate!
-// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogObvious
-cSize alignMem(const cSize& desired)
-{
-  cSize v = desired;
-  v--;
-  v |= v >> 1;
-  v |= v >> 2;
-  v |= v >> 4;
-  v |= v >> 8;
-  v |= v >> 16;
-  v++;
-  return v;
-}
-
-} // end namespace anonymous
-
-namespace W2E
-{
-
-namespace Utils
+namespace Montreal
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -48,6 +22,15 @@ namespace Utils
 // forward declarations
 class StringWrapper;
 
+// allocation result data structure
+struct allocResult
+{
+  ErrorCode err;
+  char* str;
+  u16* refCount;
+};
+
+// interface
 class StringPoolInterface
 {
 public:
@@ -55,15 +38,16 @@ public:
 
 private:
   friend class StringWrapper;
-  virtual std::tuple< ErrorCode, char*, u16* > allocate(const u16& length) = 0;
+  virtual allocResult allocate(const u16& length) = 0;
   virtual ErrorCode deallocate(const u16& length, char* str, u16* refCount) = 0;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Dynamic allocated string pool
 ///////////////////////////////////////////////////////////////////////////////
+
 // TODO: implemente using the new allocators!
-template < cSize Capacity >
+template < usize Capacity >
 class DynStringPool : public StringPoolInterface
 {
 public:
@@ -71,16 +55,19 @@ public:
   DynStringPool();
 
 private:
-  virtual std::tuple< ErrorCode, char*, u16* > allocate(const u16& length) override;
+  virtual allocResult allocate(const u16& length) override;
   virtual ErrorCode deallocate(const u16& length, char* str, u16* refCount) override;
   DynStringPool(DynStringPool&) = delete;
   DynStringPool& operator=(DynStringPool&) = delete;
 };
 
+// TODO: implement DynStrinPool
+
 ///////////////////////////////////////////////////////////////////////////////
 // Fixed size string pool - compile time allocation
 ///////////////////////////////////////////////////////////////////////////////
-template < cSize Capacity >
+
+template < usize Capacity >
 class FixedStringPool : public StringPoolInterface
 {
 public:
@@ -88,42 +75,42 @@ public:
   FixedStringPool();
 
 private:
-  virtual std::tuple< ErrorCode, char*, u16* > allocate(const u16& length) override;
+  virtual allocResult allocate(const u16& length) override;
   virtual ErrorCode deallocate(const u16& length, char* str, u16* refCount) override;
   FixedStringPool(FixedStringPool&) = delete;
   FixedStringPool& operator=(FixedStringPool&) = delete;
 
   // data
-  GLOBAL const cSize maxLength_{Capacity};
-  GLOBAL const cSize maxElements_{maxLength_ >> 3}; // smallest string is 2^3 chars
+  GLOBAL const usize maxLength_{Capacity};
+  GLOBAL const usize maxElements_{maxLength_ >> 3}; // smallest string is 2^3 chars
 
   GLOBAL char array_[maxLength_];
-  GLOBAL cSize arrayCursor_;
+  GLOBAL usize arrayCursor_;
 
   GLOBAL u16 refCount_[maxElements_];
-  GLOBAL cSize refCountCursor_;
+  GLOBAL usize refCountCursor_;
 };
 
 // GLOBAL vars initialization
-template < cSize Capacity >
+template < usize Capacity >
 char FixedStringPool< Capacity >::array_[maxLength_] = {0};
-template < cSize Capacity >
-cSize FixedStringPool< Capacity >::arrayCursor_ = 0;
-template < cSize Capacity >
+template < usize Capacity >
+usize FixedStringPool< Capacity >::arrayCursor_ = 0;
+template < usize Capacity >
 u16 FixedStringPool< Capacity >::refCount_[maxElements_] = {0};
-template < cSize Capacity >
-cSize FixedStringPool< Capacity >::refCountCursor_ = 0;
+template < usize Capacity >
+usize FixedStringPool< Capacity >::refCountCursor_ = 0;
 
 // default constructor
-template < cSize Capacity >
+template < usize Capacity >
 FixedStringPool< Capacity >::FixedStringPool()
 {
 }
 
-template < cSize Capacity >
-std::tuple< ErrorCode, char*, u16* > FixedStringPool< Capacity >::allocate(const u16& length)
+template < usize Capacity >
+allocResult FixedStringPool< Capacity >::allocate(const u16& length)
 {
-  cSize len = std::max(static_cast< cSize >(8), alignMem(length));
+  usize len = std::max(static_cast< usize >(8), roundToPow2(length));
   if((this->maxLength_ - this->arrayCursor_) > len && (this->maxElements_ > this->refCountCursor_))
   {
     // set the refCount
@@ -137,7 +124,7 @@ std::tuple< ErrorCode, char*, u16* > FixedStringPool< Capacity >::allocate(const
     this->arrayCursor_ += len;
     std::fill(str, (str + len), 0);
 
-    return std::make_tuple(NO_ERROR, str, refCount);
+    return allocResult{NO_ERROR, str, refCount};
   }
   else
   {
@@ -154,16 +141,16 @@ std::tuple< ErrorCode, char*, u16* > FixedStringPool< Capacity >::allocate(const
     {
       u16 arrayCur = (refCount - this->refCount_) << 3;
       char* str = this->array_ + arrayCur;
-      return std::make_tuple(NO_ERROR, str, refCount);
+      return allocResult{NO_ERROR, str, refCount};
     }
   }
-  return std::make_tuple(UNKNOWN_ERROR, nullptr, nullptr);
+  return allocResult{UNKNOWN_ERROR, nullptr, nullptr};
 }
 
-template < cSize Capacity >
+template < usize Capacity >
 ErrorCode FixedStringPool< Capacity >::deallocate(const u16& length, char* str, u16* refCount)
 {
-  cSize len = std::max(static_cast< cSize >(8), alignMem(length));
+  usize len = std::max(static_cast< usize >(8), roundToPow2(length));
   u16 mapLen = len >> 3;
 
   // clear refCount
@@ -174,6 +161,10 @@ ErrorCode FixedStringPool< Capacity >::deallocate(const u16& length, char* str, 
 
   return NO_ERROR;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// String Wrapper container
+///////////////////////////////////////////////////////////////////////////////
 
 class StringWrapper
 {
@@ -209,12 +200,12 @@ StringWrapper::StringWrapper(StringPoolInterface* sp, const char* initStr)
     , str_{nullptr}
 {
   u16 inLen = std::strlen(initStr);
-  u16 len = std::max(static_cast< cSize >(8), alignMem(inLen));
+  u16 len = std::max(static_cast< usize >(8), roundToPow2(inLen));
   auto ret = this->strPool_->allocate(len);
-  if(std::get< 0 >(ret) == NO_ERROR)
+  if(ret.err == NO_ERROR)
   {
-    this->str_ = std::get< 1 >(ret);
-    this->refCount_ = std::get< 2 >(ret);
+    this->str_ = ret.str;
+    this->refCount_ = ret.refCount;
 
     std::copy_n(initStr, inLen, this->str_);
   }
@@ -257,12 +248,12 @@ StringWrapper& StringWrapper::operator=(const char* initStr)
   }
 
   u16 inLen = std::strlen(initStr);
-  u16 len = std::max(static_cast< cSize >(8), alignMem(inLen));
+  u16 len = std::max(static_cast< usize >(8), roundToPow2(inLen));
   auto ret = this->strPool_->allocate(len);
-  if(std::get< 0 >(ret) == NO_ERROR)
+  if(ret.err == NO_ERROR)
   {
-    this->str_ = std::get< 1 >(ret);
-    this->refCount_ = std::get< 2 >(ret);
+    this->str_ = ret.str;
+    this->refCount_ = ret.refCount;
 
     std::copy_n(initStr, inLen, this->str_);
   }
@@ -282,11 +273,11 @@ char StringWrapper::operator[](u16 pos)
   if((*this->refCount_) > 1)
   {
     auto ret = this->strPool_->allocate(this->length_);
-    if(std::get< 0 >(ret) == NO_ERROR)
+    if(ret.err == NO_ERROR)
     {
       --(*this->refCount_);
-      this->refCount_ = std::get< 2 >(ret);
-      this->str_ = std::get< 1 >(ret);
+      this->str_ = ret.str;
+      this->refCount_ = ret.refCount;
     }
     else
     {
@@ -300,8 +291,6 @@ const char* StringWrapper::cStr() { return this->str_; }
 
 // TODO: add string manipulation functions.
 
-} // end namespace Utils
+} // end namespace Montreal
 
-} // end namespace W2E
-
-#endif // UTILS_STRINGS_HPP
+#endif // STRINGS_HPP
