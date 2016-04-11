@@ -1,8 +1,8 @@
 #TO-DO:
 
-[ ] Strings
-[ ] List
+[X] List
 [ ] HashMap
+[ ] Strings
 [ ] Tree
 [ ] Move constructors for every container
 [ ] Tests
