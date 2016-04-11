@@ -28,6 +28,7 @@ SOFTWARE.
 #include <algorithm>
 
 #include "basic_types.hpp"
+#include "memory.hpp"
 
 namespace Montreal
 {
@@ -49,6 +50,7 @@ struct ListInterface
   ElementType* head_;
   ElementType* tail_;
   ElementType* free_;
+  ElementType init_;
 
   virtual ~ListInterface(){};
   ListInterface();
@@ -63,6 +65,7 @@ ListInterface< Type >::ListInterface()
     , head_{nullptr}
     , tail_{nullptr}
     , free_{nullptr}
+    , init_{Type(), nullptr, nullptr}
 {
 }
 
@@ -73,6 +76,7 @@ ListInterface< Type >::ListInterface(ListInterface& other)
     , head_{nullptr}
     , tail_{nullptr}
     , free_{nullptr}
+    , init_{other.init_}
 {
 }
 
@@ -104,34 +108,94 @@ ListInterface< Type >& ListInterface< Type >::operator=(const ListInterface< Typ
 // FixedList : Fixed size double linked list
 ///////////////////////////////////////////////////////////////////////////////
 
-// TODO: implement
 template < typename Type, usize Capacity >
 struct FixedList : public ListInterface< Type >
 {
+  GLOBAL const usize capacity_;
+  typename ListInterface< Type >::ElementType buffer_[Capacity];
 
   FixedList() = delete;
   explicit FixedList(const Type& init);
   FixedList(const FixedList& other);
-  FixedList& operator=(const FixedList& other);
   // TODO: Move constructor???
   virtual ~FixedList() {}
 };
+
+// GLOBAL
+template < typename Type, usize Capacity >
+const usize FixedList< Type, Capacity >::capacity_{Capacity};
+
+// constructor - initialized
+template < typename Type, usize Capacity >
+FixedList< Type, Capacity >::FixedList(const Type& init)
+    : ListInterface< Type >()
+    , buffer_{}
+{
+  this->free_ = this->buffer;
+  this->init_.data = init;
+}
+
+// copy constructor
+template < typename Type, usize Capacity >
+FixedList< Type, Capacity >::FixedList(const FixedList& other)
+    : ListInterface< Type >(other)
+    , buffer_{}
+{
+  this->free_ = this->buffer;
+  this->operator=(other);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // List : dynamic double linked list
 ///////////////////////////////////////////////////////////////////////////////
 
-// TODO: implement
-template < typename Type, usize Capacity >
+template < typename Type, typename Allocator >
 struct List : public ListInterface< Type >
 {
+  using AllocatorType = Allocator;
+  Allocator& alloc_;
+  usize capacity_;
+  Blk memBlock_;
+
   List() = delete;
-  explicit List(const Type& init);
-  List(const List& other);
-  List& operator=(const List& other);
+  List(Allocator& alloc, const Type& init, const usize Capacity);
+  explicit List(const List& other);
   // TODO: Move constructor???
-  virtual ~List() {}
+  virtual ~List();
 };
+
+// virtual destructor
+template < typename Type, typename Allocator >
+List< Type, Allocator >::~List()
+{
+  if(this->memBlock_.ptr)
+  {
+    this->alloc_.deallocate(this->memBlock_);
+  }
+}
+
+// constructor
+template < typename Type, typename Allocator >
+List< Type, Allocator >::List(Allocator& alloc, const Type& init, const usize Capacity)
+    : ListInterface< Type >()
+    , alloc_{alloc}
+    , capacity_{Capacity}
+    , memBlock_{nullptr, 0}
+{
+  this->free_ = allocateType< Type, Allocator >(this->alloc_, this->memBlock_, this->capacity_);
+}
+
+// copy constructor
+template < typename Type, typename Allocator >
+List< Type, Allocator >::List(const List& other)
+    : ListInterface< Type >(other)
+    , alloc_{other.alloc}
+    , capacity_{other.capacity_}
+    , memBlock_{nullptr, 0}
+{
+  this->free_ = allocateType< Type, Allocator >(this->alloc_, this->memBlock_, this->capacity_);
+  this->operator=(other);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Accessors
