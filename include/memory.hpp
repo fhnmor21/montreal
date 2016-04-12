@@ -60,11 +60,14 @@ namespace Montreal
 // allocator based on ideas from Alexandrescu:
 // https://github.com/CppCon/CppCon2015/tree/master/Presentations/allocator%20Is%20to%20Allocation%20what%20vector%20Is%20to%20Vexation
 
+// FIXME: add reference count as a header of the memory chunk
+// NOTE: perhaps the size should be a header info as well
 // memory block
 struct Blk
 {
   void* ptr;
   usize size;
+  // usize refCount;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -508,10 +511,13 @@ Type* allocateType(Allocator& alloc, Blk& b, const usize amount)
   return nullptr;
 }
 
-// Resize: for linear containers
+// reserve: increase the size of the container. But for sequencial containers only!
+// NOTE: for dymanically allocated containers only, for obvious reasons...
+// NOTE: will NOT work with non sequencial containers (hashmaps & sets)
+// even if they are ordered (trees and lists)
 //-----------------------------------------------------------------
 template < typename Container >
-bool resize(Container& container, const usize Capacity)
+bool reserve(Container& container, const usize Capacity)
 {
   using Type = typename Container::ElementType;
   using Allocator = typename Container::AllocatorType;
@@ -522,6 +528,7 @@ bool resize(Container& container, const usize Capacity)
     typename Container::ElementType* oldArray_ = container.array_;
 
     container.array_ = allocateType< Type, Allocator >(container.alloc_, newMemBlk, Capacity);
+    // FIXME: this is not going to work with DEQ
     std::fill((container.array_ + container.capacity_ - 1),
               (container.array_ + Capacity),
               container.init_);
@@ -535,6 +542,34 @@ bool resize(Container& container, const usize Capacity)
     }
     container.memBlock_ = newMemBlk;
 
+    return true;
+  }
+  return false;
+}
+
+// reserve: size the container capacity to current length. But for sequencial containers only!
+// NOTE: for dymanically allocated containers only, for obvious reasons...
+// NOTE: will NOT work with non sequencial containers (hashmaps & sets)
+// even if they are ordered (trees and lists)
+//-----------------------------------------------------------------
+template < typename Container >
+bool shrink(Container& container)
+{
+  using Type = typename Container::ElementType;
+  using Allocator = typename Container::AllocatorType;
+  usize length = container.length_;
+
+  if(length < container.capacity_)
+  {
+    Blk newMemBlk;
+    typename Container::ElementType* newArray_ =
+        allocateType< Type, Allocator >(container.alloc_, newMemBlk, length);
+
+    for(int i = 0; i < length; i++)
+    {
+      auto val = at(container, 0);
+      // FIXME: DEQ will not work like this!!!
+    }
     return true;
   }
   return false;
