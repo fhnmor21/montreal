@@ -41,8 +41,8 @@ struct DEQInterface : ArrayInterface< Type >
 
   virtual ~DEQInterface() {}
   DEQInterface();
-  explicit DEQInterface(DEQInterface& other);
-  DEQInterface& operator=(DEQInterface& other);
+  explicit DEQInterface(const DEQInterface& other);
+  DEQInterface& operator=(const DEQInterface& other);
 };
 
 // default constructor
@@ -55,7 +55,7 @@ DEQInterface< Type >::DEQInterface()
 
 // copy constructor
 template < typename Type >
-DEQInterface< Type >::DEQInterface(DEQInterface< Type >& other)
+DEQInterface< Type >::DEQInterface(const DEQInterface< Type >& other)
     : ArrayInterface< Type >(other)
     , canOverwrite_{other.canOverwrite_}
 {
@@ -63,7 +63,7 @@ DEQInterface< Type >::DEQInterface(DEQInterface< Type >& other)
 
 // assgignement operator
 template < typename Type >
-DEQInterface< Type >& DEQInterface< Type >::operator=(DEQInterface< Type >& other)
+DEQInterface< Type >& DEQInterface< Type >::operator=(const DEQInterface< Type >& other)
 {
   this->canOverwrite_ = other.canOverwrite_;
 }
@@ -111,7 +111,8 @@ FixedDEQ< Type, Capacity, canOverwrite >::FixedDEQ(const Type& init)
 
 // copy constructor
 template < typename Type, usize Capacity, bool canOverwrite >
-FixedDEQ< Type, Capacity, canOverwrite >::FixedDEQ(const FixedDEQ& other)
+FixedDEQ< Type, Capacity, canOverwrite >::FixedDEQ(
+    const FixedDEQ< Type, Capacity, canOverwrite >& other)
     : DEQInterface< Type >(other)
     , initialLen_{other.initialLen_}
     , buffer_{}
@@ -126,7 +127,7 @@ FixedDEQ< Type, Capacity, canOverwrite >::FixedDEQ(const FixedDEQ& other)
 // assignement operator
 template < typename Type, usize Capacity, bool canOverwrite >
 FixedDEQ< Type, Capacity, canOverwrite >& FixedDEQ< Type, Capacity, canOverwrite >::
-operator=(const FixedDEQ& other)
+operator=(const FixedDEQ< Type, Capacity, canOverwrite >& other)
 {
   std::copy(
       other.array_, (other.array_ + std::min(other.capacity_, this->capacity_)), this->array_);
@@ -196,7 +197,7 @@ DEQ< Type, Allocator, canOverwrite >::DEQ(Allocator& alloc, const Type& init, co
 
 // copy constructor
 template < typename Type, typename Allocator, bool canOverwrite >
-DEQ< Type, Allocator, canOverwrite >::DEQ(const DEQ& other)
+DEQ< Type, Allocator, canOverwrite >::DEQ(const DEQ< Type, Allocator, canOverwrite >& other)
     : DEQInterface< Type >(other)
     , alloc_{other.alloc}
     , capacity_{other.capacity_}
@@ -214,7 +215,7 @@ DEQ< Type, Allocator, canOverwrite >::DEQ(const DEQ& other)
 // assignement operator
 template < typename Type, typename Allocator, bool canOverwrite >
 DEQ< Type, Allocator, canOverwrite >& DEQ< Type, Allocator, canOverwrite >::
-operator=(const DEQ& other)
+operator=(const DEQ< Type, Allocator, canOverwrite >& other)
 {
   if(this->memBlock_.ptr)
   {

@@ -54,7 +54,7 @@ struct ListInterface
 
   virtual ~ListInterface(){};
   ListInterface();
-  explicit ListInterface(ListInterface& other);
+  explicit ListInterface(const ListInterface& other);
   ListInterface& operator=(const ListInterface& other);
 };
 
@@ -71,7 +71,7 @@ ListInterface< Type >::ListInterface()
 
 // copy constructor
 template < typename Type >
-ListInterface< Type >::ListInterface(ListInterface& other)
+ListInterface< Type >::ListInterface(const ListInterface< Type >& other)
     : length_{0}
     , head_{nullptr}
     , tail_{nullptr}
@@ -137,7 +137,7 @@ FixedList< Type, Capacity >::FixedList(const Type& init)
 
 // copy constructor
 template < typename Type, usize Capacity >
-FixedList< Type, Capacity >::FixedList(const FixedList& other)
+FixedList< Type, Capacity >::FixedList(const FixedList< Type, Capacity >& other)
     : ListInterface< Type >(other)
     , buffer_{}
 {
@@ -187,7 +187,7 @@ List< Type, Allocator >::List(Allocator& alloc, const Type& init, const usize Ca
 
 // copy constructor
 template < typename Type, typename Allocator >
-List< Type, Allocator >::List(const List& other)
+List< Type, Allocator >::List(const List< Type, Allocator >& other)
     : ListInterface< Type >(other)
     , alloc_{other.alloc}
     , capacity_{other.capacity_}

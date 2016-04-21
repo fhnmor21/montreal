@@ -511,13 +511,13 @@ Type* allocateType(Allocator& alloc, Blk& b, const usize amount)
   return nullptr;
 }
 
-// reserve: increase the size of the container. But for sequencial containers only!
+// grow the size of the container.
 // NOTE: for dymanically allocated containers only, for obvious reasons...
 // NOTE: will NOT work with non sequencial containers (hashmaps & sets)
 // even if they are ordered (trees and lists)
 //-----------------------------------------------------------------
 template < typename Container >
-bool reserve(Container& container, const usize Capacity)
+bool grow(Container& container, const usize Capacity)
 {
   using Type = typename Container::ElementType;
   using Allocator = typename Container::AllocatorType;
@@ -547,7 +547,7 @@ bool reserve(Container& container, const usize Capacity)
   return false;
 }
 
-// reserve: size the container capacity to current length. But for sequencial containers only!
+// shrink the size of container capacity to current length.
 // NOTE: for dymanically allocated containers only, for obvious reasons...
 // NOTE: will NOT work with non sequencial containers (hashmaps & sets)
 // even if they are ordered (trees and lists)

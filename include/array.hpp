@@ -55,7 +55,7 @@ struct ArrayInterface
 
   virtual ~ArrayInterface() {}
   ArrayInterface();
-  explicit ArrayInterface(ArrayInterface& other);
+  explicit ArrayInterface(const ArrayInterface& other);
   ArrayInterface& operator=(const ArrayInterface& other);
 };
 
@@ -72,7 +72,7 @@ ArrayInterface< Type >::ArrayInterface()
 
 // copy constructor
 template < typename Type >
-ArrayInterface< Type >::ArrayInterface(ArrayInterface& other)
+ArrayInterface< Type >::ArrayInterface(const ArrayInterface< Type >& other)
     : firstPos_{other.firstPos}
     , lastPos_{other.lastPos_}
     , length_{other.length_}
@@ -136,7 +136,7 @@ FixedArray< Type, Capacity >::FixedArray(const Type& init)
 
 // copy constructor
 template < typename Type, usize Capacity >
-FixedArray< Type, Capacity >::FixedArray(const FixedArray& other)
+FixedArray< Type, Capacity >::FixedArray(const FixedArray< Type, Capacity >& other)
     : ArrayInterface< Type >(other)
     , initialLen_{other.initialLen_}
     , buffer_{}
@@ -148,7 +148,8 @@ FixedArray< Type, Capacity >::FixedArray(const FixedArray& other)
 
 // assignement operator
 template < typename Type, usize Capacity >
-FixedArray< Type, Capacity >& FixedArray< Type, Capacity >::operator=(const FixedArray& other)
+FixedArray< Type, Capacity >& FixedArray< Type, Capacity >::
+operator=(const FixedArray< Type, Capacity >& other)
 {
   std::copy(
       other.array_, (other.array_ + std::min(other.capacity_, this->capacity_)), this->array_);
