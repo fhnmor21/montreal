@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include "array.hpp"
 #include "hash.hpp"
+#include "pointers.hpp"
 
 namespace Montreal
 {
@@ -204,10 +205,45 @@ inline bool emplace(HashMapInterface< KeyType, EntryType >& container,
                     const KeyType& key,
                     const EntryType& entry)
 {
-  if(container.length_ < container.data_.capacity())
+  const usize cap = container.data_.capacity();
+  if(container.length_ < cap)
   {
     // TODO: insert the entry
-    // return // some value;
+    typename HashMapInterface< KeyType, EntryType >::ElementType el;
+    el.key = key;
+    el.value = entry;
+    Hashes hash01 = hash(key);
+
+    for(u8 i = 0; i < 3; i++)
+    {
+      u32 k = hash01.h[i] % cap;
+      typename HashMapInterface< KeyType, EntryType >::ElementType& old =
+          Deref(at(container.data_, k));
+      if(old.key == container.init_.key)
+      {
+        // free slot add item and break loop
+
+        return true;
+      }
+      else if(old.key == key)
+      {
+        // slot is taken by previous entry for this key
+        // overwrite and break loop
+
+        return true;
+      }
+      else if(old.key != key)
+      {
+        // slot is taken by entry with different key key
+        // continue loop to try next hash
+
+        continue;
+      }
+    }
+
+    // if we got to this point without find a place for the item
+    // we'll need to move things around!
+    // TODO
   }
   return false;
 }

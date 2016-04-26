@@ -35,9 +35,15 @@ namespace Montreal
 
 struct Hashes
 {
-  u64 murmur;
-  u64 city;
-  u64 spooky;
+  union {
+    struct
+    {
+      u64 murmur;
+      u64 city;
+      u64 spooky;
+    };
+    u64 h[3];
+  };
 };
 
 template < typename KeyType >
@@ -45,7 +51,7 @@ Hashes hash(const KeyType& key, u64 seed = 0x9747b28c)
 {
   const usize len(sizeof(KeyType));
 
-  Hashes rVal = {0, 0, 0};
+  Hashes rVal = {{{0, 0, 0}}};
 
   union {
     KeyType key_;
