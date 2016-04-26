@@ -22,14 +22,43 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef TRIE_HPP
-#define TRIE_HPP
+#ifndef HASH_HPP
+#define HASH_HPP
 
-//#include "FILENAME.hpp"
+#include "basic_types.hpp"
+#include "hashes/City.h"
+#include "hashes/MurmurHash2.h"
+#include "hashes/Spooky.h"
 
 namespace Montreal
 {
 
+struct Hashes
+{
+  u64 murmur;
+  u64 city;
+  u64 spooky;
+};
+
+template < typename KeyType >
+Hashes hash(const KeyType& key, u64 seed = 0x9747b28c)
+{
+  const usize len(sizeof(KeyType));
+
+  Hashes rVal = {0, 0, 0};
+
+  union {
+    KeyType key_;
+    u8 buf_[len];
+  } buffer;
+
+  buffer.key_ = key;
+
+  rVal.city = CityHash64WithSeed(buffer.buf_, len, seed);
+  rVal.murmur = MurmurHash64A(buffer.buf_, len, seed);
+  rVal.spooky = SpookyHash::Hash64(buffer.buf_, len, seed);
+}
+
 } // end namespace Montreal
 
-#endif // TRIE_HPP
+#endif // HASH_HPP

@@ -26,7 +26,7 @@ SOFTWARE.
 #define HASHMAP_HPP
 
 #include "array.hpp"
-#include "basic_types.hpp"
+#include "hash.hpp"
 
 namespace Montreal
 {
@@ -38,37 +38,38 @@ struct Allocator;
 ///////////////////////////////////////////////////////////////////////////////
 
 // TODO: Implement
-template < typename Type >
+template < typename KeyType, typename EntryType >
 struct HashMapInterface
 {
   struct ElementType
   {
-    u64 key;
-    Type value;
-    ElementType* next;
+    KeyType key;
+    EntryType value;
   };
 
-  Type init_;
+  ElementType init_;
   usize length_;
 
   virtual ~HashMapInterface() {}
   HashMapInterface() = delete;
-  explicit HashMapInterface(const Type& init);
+  explicit HashMapInterface(const ElementType& init);
   explicit HashMapInterface(const HashMapInterface& other);
   // TODO: Move constructor???
 };
 
 // default constructor
-template < typename Type >
-HashMapInterface< Type >::HashMapInterface(const Type& init)
+template < typename KeyType, typename EntryType >
+HashMapInterface< KeyType, EntryType >::HashMapInterface(
+    const typename HashMapInterface< KeyType, EntryType >::ElementType& init)
     : init_(init)
     , length_(0)
 {
 }
 
 // copy constructor
-template < typename Type >
-HashMapInterface< Type >::HashMapInterface(const HashMapInterface< Type >& other)
+template < typename KeyType, typename EntryType >
+HashMapInterface< KeyType, EntryType >::HashMapInterface(
+    const HashMapInterface< KeyType, EntryType >& other)
     : init_(other.init_)
     , length_(other.length_)
 {
@@ -78,45 +79,44 @@ HashMapInterface< Type >::HashMapInterface(const HashMapInterface< Type >& other
 // FixedHashMap : fixed size hash map containter
 ///////////////////////////////////////////////////////////////////////////////
 
-// TODO: implement
-template < typename Type, usize Capacity >
-struct FixedHashMap : public HashMapInterface< Type >
+template < typename KeyType, typename EntryType, usize Capacity >
+struct FixedHashMap : public HashMapInterface< KeyType, EntryType >
 {
-  FixedArray< typename HashMapInterface< Type >::ElementType, Capacity > data_;
+  FixedArray< typename HashMapInterface< KeyType, EntryType >::ElementType, Capacity > data_;
 
   virtual ~FixedHashMap() {}
   FixedHashMap() = delete;
-  explicit FixedHashMap(const Type& init);
+  explicit FixedHashMap(const typename HashMapInterface< KeyType, EntryType >::ElementType& init);
   explicit FixedHashMap(const FixedHashMap& other);
   FixedHashMap& operator=(const FixedHashMap& other);
   // TODO: Move constructor???
 };
 
 // constructor
-template < typename Type, usize Capacity >
-FixedHashMap< Type, Capacity >::FixedHashMap(const Type& init)
-    : HashMapInterface< Type >(init)
-    , data_({0, init, nullptr})
+template < typename KeyType, typename EntryType, usize Capacity >
+FixedHashMap< KeyType, EntryType, Capacity >::FixedHashMap(
+    const typename HashMapInterface< KeyType, EntryType >::ElementType& init)
+    : HashMapInterface< KeyType, EntryType >(init)
 {
 }
 
 // copy constructor
-template < typename Type, usize Capacity >
-FixedHashMap< Type, Capacity >::FixedHashMap(const FixedHashMap< Type, Capacity >& other)
-    : HashMapInterface< Type >(other)
-    , data_({0, other.init_, nullptr})
+template < typename KeyType, typename EntryType, usize Capacity >
+FixedHashMap< KeyType, EntryType, Capacity >::FixedHashMap(
+    const FixedHashMap< KeyType, EntryType, Capacity >& other)
+    : HashMapInterface< KeyType, EntryType >(other)
 {
-  // TODO: copy entries and re-hash
+  // FIXME: copy entries and re-hash
 }
 
 // assignement operator
-template < typename Type, usize Capacity >
-FixedHashMap< Type, Capacity >& FixedHashMap< Type, Capacity >::
-operator=(const FixedHashMap< Type, Capacity >& other)
+template < typename KeyType, typename EntryType, usize Capacity >
+FixedHashMap< KeyType, EntryType, Capacity >& FixedHashMap< KeyType, EntryType, Capacity >::
+operator=(const FixedHashMap< KeyType, EntryType, Capacity >& other)
 {
   this->init_ = other.init_;
   this->data_ = {0, this->init_, nullptr};
-  // TODO: copy entries and re-hash
+  // FIXME: copy entries and re-hash
   this->length_ = other.length_;
 
   return *this;
@@ -127,12 +127,13 @@ operator=(const FixedHashMap< Type, Capacity >& other)
 ///////////////////////////////////////////////////////////////////////////////
 
 // TODO: implement
-template < typename Type, typename Allocator >
-struct HashMap : public HashMapInterface< Type >
+template < typename KeyType, typename EntryType, typename Allocator >
+struct HashMap : public HashMapInterface< KeyType, EntryType >
 {
 
   HashMap() = delete;
-  explicit HashMap(Allocator& alloc, const Type& init);
+  explicit HashMap(Allocator& alloc,
+                   const typename HashMapInterface< KeyType, EntryType >::ElementType& init);
   explicit HashMap(const HashMap& other);
   HashMap& operator=(const HashMap& other);
   // TODO: Move constructor???
@@ -148,16 +149,16 @@ struct HashMap : public HashMapInterface< Type >
 // length of the container
 // @param   container
 // @return  size
-template < typename Type >
-inline usize len(HashMapInterface< Type >& container)
+template < typename KeyType, typename EntryType >
+inline usize len(HashMapInterface< KeyType, EntryType >& container)
 {
   return container.length_;
 }
 
 // clear the container
 // @param container
-template < typename Type >
-inline void clear(HashMapInterface< Type >& container)
+template < typename KeyType, typename EntryType >
+inline void clear(HashMapInterface< KeyType, EntryType >& container)
 {
   clear(container.data_);
   container.length_ = 0;
@@ -167,8 +168,8 @@ inline void clear(HashMapInterface< Type >& container)
 // @param container container to access
 // @param key       key of element to access
 // return pointer to the element at the container required position
-template < typename Type >
-inline usize count(HashMapInterface< Type >& container, u64 key)
+template < typename KeyType, typename EntryType >
+inline usize count(HashMapInterface< KeyType, EntryType >& container, const KeyType& key)
 {
   if(container.length_)
   {
@@ -182,8 +183,8 @@ inline usize count(HashMapInterface< Type >& container, u64 key)
 // @param container container to access
 // @param key       key of element to access
 // return pointer to the element at the container required position
-template < typename Type >
-inline Type* find(HashMapInterface< Type >& container, u64 key)
+template < typename KeyType, typename EntryType >
+inline EntryType* find(HashMapInterface< KeyType, EntryType >& container, const KeyType& key)
 {
   if(container.length_)
   {
@@ -198,23 +199,25 @@ inline Type* find(HashMapInterface< Type >& container, u64 key)
 // @param key       key of element to access
 // @param entry     element content
 // return pointer to the element at the container required position
-template < typename Type >
-inline bool emplace(HashMapInterface< Type >& container, u64 key, const Type& entry)
+template < typename KeyType, typename EntryType >
+inline bool emplace(HashMapInterface< KeyType, EntryType >& container,
+                    const KeyType& key,
+                    const EntryType& entry)
 {
-  if(container.length_)
+  if(container.length_ < container.data_.capacity())
   {
     // TODO: insert the entry
     // return // some value;
   }
-  return true;
+  return false;
 }
 
 // remove an element from container
 // @param container container to access
 // @param key       key of element to remove
 // return pointer to the element at the container required position
-template < typename Type >
-inline bool remove(HashMapInterface< Type >& container, u64 key)
+template < typename KeyType, typename EntryType >
+inline bool remove(HashMapInterface< KeyType, EntryType >& container, KeyType key)
 {
   if(container.length_)
   {
