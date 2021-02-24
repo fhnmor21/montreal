@@ -13,5 +13,6 @@
 
 # Back Burner:
 * [ ] Trie
+* [ ] Trie Mapped Array
 * [ ] Move constructors for every container
 * [ ] Fix Potential Allocator fragmentation due to composite freelists
